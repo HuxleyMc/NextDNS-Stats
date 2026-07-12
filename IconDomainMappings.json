@@ -1,8 +1,11 @@
 {
-  "cloudflareinsights.com": "cloudflare.com",
-  "googletagmanager.com": "google.com",
-  "googleapis.com": "google.com",
-  "gstatic.com": "google.com",
+  "a2z.com": "amazon.com",
+  "app-measurement.com": "google.com",
   "appsflyersdk.com": "appsflyer.com",
-  "datadoghq.com": "datadog.com"
+  "browser-intake-datadoghq.com": "datadog.com",
+  "cloudflareinsights.com": "cloudflare.com",
+  "datadoghq.com": "datadog.com",
+  "googleapis.com": "google.com",
+  "googletagmanager.com": "google.com",
+  "gstatic.com": "google.com"
 }
