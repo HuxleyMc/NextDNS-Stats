@@ -2,6 +2,8 @@
 
 A native, menu-bar-only macOS app for checking whether this Mac currently uses NextDNS and viewing account activity without keeping the NextDNS dashboard open.
 
+![NextDNS Stats overview and analytics](docs/images/nextdns-stats-overview.png)
+
 ## What it shows
 
 - Current NextDNS connection status and DNS protocol
