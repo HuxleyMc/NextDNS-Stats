@@ -60,7 +60,8 @@ public actor RemoteIconMappingProvider {
         var aliases = IconDomainMappings.fallbackAliases
         do {
             var request = URLRequest(url: remoteURL)
-            request.cachePolicy = .reloadRevalidatingCacheData
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
             request.timeoutInterval = 10
             let (data, response) = try await session.data(for: request)
             if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
