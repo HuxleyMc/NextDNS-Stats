@@ -9,6 +9,7 @@ private final class FaviconStore {
     private let images = NSCache<NSString, NSImage>()
     private var unavailable = Set<String>()
     private let session: URLSession
+    private let mappingProvider = RemoteIconMappingProvider.shared
 
     private init() {
         let configuration = URLSessionConfiguration.default
@@ -27,7 +28,8 @@ private final class FaviconStore {
         if let image = images.object(forKey: key) { return image }
         guard !unavailable.contains(domain) else { return nil }
 
-        for candidate in FaviconURLProvider.candidateDomains(for: domain) {
+        let aliases = await mappingProvider.aliases()
+        for candidate in FaviconURLProvider.candidateDomains(for: domain, aliases: aliases) {
             let candidateKey = candidate as NSString
             if let image = images.object(forKey: candidateKey) {
                 images.setObject(image, forKey: key)

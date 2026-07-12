@@ -8,15 +8,24 @@ public enum FaviconURLProvider {
         return baseURL.appendingPathComponent(normalized).appendingPathExtension("ico")
     }
 
-    public static func candidateDomains(for domain: String) -> [String] {
+    public static func candidateDomains(
+        for domain: String,
+        aliases: [String: String] = IconDomainMappings.fallbackAliases
+    ) -> [String] {
         guard let normalized = normalizedDomain(domain) else { return [] }
         var labels = normalized.split(separator: ".").map(String.init)
-        var candidates = [normalized]
+        var candidates: [String] = []
+        if let brandDomain = IconDomainMappings.brandDomain(for: normalized, aliases: aliases) {
+            candidates.append(brandDomain)
+        }
+        candidates.append(normalized)
         while labels.count > 2 {
             labels.removeFirst()
             candidates.append(labels.joined(separator: "."))
         }
-        return candidates
+        return candidates.reduce(into: []) { result, candidate in
+            if !result.contains(candidate) { result.append(candidate) }
+        }
     }
 
     private static func normalizedDomain(_ domain: String) -> String? {

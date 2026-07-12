@@ -30,6 +30,8 @@ The API key is stored as a generic password in macOS Keychain under service `io.
 
 Visible domain names are sent to `https://icons.duckduckgo.com` to retrieve favicons. Responses are cached on disk according to HTTP caching rules, and the UI uses a local monogram when an icon is unavailable.
 
+Service domains that should use a different brand favicon are defined in the repository-root `IconDomainMappings.json`. The app fetches the file from GitHub when it starts, validates every entry, and retains compiled defaults for offline use. Entries match the listed hostname and all its subdomains, so mapping changes only require editing and pushing the JSON file—not rebuilding the app.
+
 ## Development
 
 ```sh
