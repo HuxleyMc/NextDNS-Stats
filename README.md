@@ -11,7 +11,7 @@ A native, menu-bar-only macOS app for checking whether this Mac currently uses N
 - Recent DNS logs, including device and block reason
 - Request breakdowns by protocol and device
 
-The app refreshes once when its popover opens, then every 30 seconds while it remains open. Closing the popover stops polling.
+The app refreshes when its popover opens unless the current snapshot is less than 30 seconds old, then polls every 30 seconds while it remains open. Closing the popover stops polling, and manual refresh always fetches immediately.
 
 ## Build and run
 

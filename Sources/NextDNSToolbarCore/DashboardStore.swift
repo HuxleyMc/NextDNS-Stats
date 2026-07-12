@@ -14,8 +14,10 @@ public final class DashboardStore: ObservableObject {
     private let client: any NextDNSClientProtocol
     private let credentials: any CredentialStoring
     private let refreshInterval: Duration
+    private let refreshClock = ContinuousClock()
     private var apiKey: String?
     private var refreshTask: Task<Void, Never>?
+    private var lastRefreshAttempt: ContinuousClock.Instant?
 
     public init(
         client: any NextDNSClientProtocol = NextDNSClient(),
@@ -37,7 +39,7 @@ public final class DashboardStore: ObservableObject {
         refreshTask = Task { [weak self] in
             guard let self else { return }
             while !Task.isCancelled {
-                await self.refresh()
+                await self.refreshIfStale()
                 do {
                     try await Task.sleep(for: self.refreshInterval)
                 } catch {
@@ -52,7 +54,16 @@ public final class DashboardStore: ObservableObject {
         refreshTask = nil
     }
 
+    public func refreshIfStale() async {
+        if let lastRefreshAttempt,
+           lastRefreshAttempt.duration(to: refreshClock.now) < refreshInterval {
+            return
+        }
+        await refresh()
+    }
+
     public func refresh() async {
+        lastRefreshAttempt = refreshClock.now
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }

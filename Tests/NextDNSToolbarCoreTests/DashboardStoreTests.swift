@@ -61,6 +61,25 @@ final class DashboardStoreTests: XCTestCase {
         XCTAssertEqual(finalCount, stoppedCount)
     }
 
+    func testOpenRefreshReusesSnapshotUntilCacheExpires() async throws {
+        let client = FakeClient()
+        let store = DashboardStore(
+            client: client,
+            credentials: MemoryCredentials(value: nil),
+            refreshInterval: .milliseconds(30)
+        )
+
+        await store.refreshIfStale()
+        await store.refreshIfStale()
+        let cachedCount = await client.counts().connections
+        XCTAssertEqual(cachedCount, 1)
+
+        try await Task.sleep(for: .milliseconds(40))
+        await store.refreshIfStale()
+        let expiredCount = await client.counts().connections
+        XCTAssertEqual(expiredCount, 2)
+    }
+
     func testFailedRefreshKeepsExistingSnapshotAndShowsError() async {
         let client = FakeClient()
         let store = DashboardStore(client: client, credentials: MemoryCredentials(value: "key"))
