@@ -62,12 +62,12 @@ struct LogRow: View {
         HStack(spacing: 10) {
             FaviconView(domain: entry.iconDomain, size: 24)
                 .overlay(alignment: .bottomTrailing) {
-                    Image(systemName: entry.status == "blocked" ? "hand.raised.fill" : "checkmark.circle.fill")
-                        .font(.system(size: 8, weight: .bold))
+                    Image(systemName: entry.status == "blocked" ? "hand.raised.fill" : "checkmark")
+                        .font(.system(size: entry.status == "blocked" ? 7 : 8, weight: .bold))
                         .foregroundStyle(.white)
-                        .padding(2)
+                        .frame(width: 11, height: 11, alignment: .center)
                         .background(entry.status == "blocked" ? Color.red : Color.green, in: Circle())
-                        .offset(x: 3, y: 3)
+                        .offset(x: 2, y: 2)
                 }
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.domain).lineLimit(1).font(.subheadline)
