@@ -82,6 +82,7 @@ final class NextDNSClientTests: XCTestCase {
     func testConnectionStatusTreatsOkAsConnected() async throws {
         URLProtocolStub.handler = { request in
             XCTAssertEqual(request.url?.host, "test.nextdns.io")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/json")
             return Self.response(for: request, json: #"{"status":"ok","protocol":"DOH","profile":"abc123"}"#)
         }
 

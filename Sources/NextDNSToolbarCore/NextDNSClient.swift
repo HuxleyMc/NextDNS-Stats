@@ -74,7 +74,9 @@ public final class NextDNSClient: NextDNSClientProtocol, @unchecked Sendable {
     }
 
     public func fetchConnectionStatus() async throws -> ConnectionStatus {
-        let (data, response) = try await session.data(from: connectionURL)
+        var request = URLRequest(url: connectionURL)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
         try validate(response)
         return try decoder.decode(ConnectionStatus.self, from: data)
     }
