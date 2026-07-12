@@ -91,16 +91,30 @@ final class DashboardStoreTests: XCTestCase {
         XCTAssertEqual(store.snapshot?.totalRequests, 100)
         XCTAssertEqual(store.errorMessage, "Temporary failure")
     }
+
+    func testLoadMoreLogsAppendsNextCursorPage() async {
+        let client = FakeClient()
+        let store = DashboardStore(client: client, credentials: MemoryCredentials(value: "key"))
+        await store.refresh()
+
+        await store.loadMoreLogs()
+
+        XCTAssertEqual(store.snapshot?.logs.map(\.domain), ["first.example", "second.example"])
+        XCTAssertNil(store.snapshot?.nextLogCursor)
+        let counts = await client.counts()
+        XCTAssertEqual(counts.logCursors, ["next-page"])
+    }
 }
 
 private actor FakeClient: NextDNSClientProtocol {
     var profileRequests = 0
     var dashboardProfileIDs: [String] = []
     var connectionRequests = 0
+    var logCursors: [String?] = []
     private var dashboardError: Error?
 
-    func counts() -> (profiles: Int, dashboardIDs: [String], connections: Int) {
-        (profileRequests, dashboardProfileIDs, connectionRequests)
+    func counts() -> (profiles: Int, dashboardIDs: [String], connections: Int, logCursors: [String?]) {
+        (profileRequests, dashboardProfileIDs, connectionRequests, logCursors)
     }
 
     func setDashboardError(_ error: Error?) { dashboardError = error }
@@ -120,13 +134,25 @@ private actor FakeClient: NextDNSClientProtocol {
             blockedDomains: [],
             protocols: [],
             devices: [],
-            logs: []
+            logs: [Self.log(domain: "first.example")],
+            nextLogCursor: "next-page"
         )
+    }
+
+    func fetchLogs(profileID: String, apiKey: String, from: Date, cursor: String?) async throws -> LogPage {
+        logCursors.append(cursor)
+        return LogPage(entries: [Self.log(domain: "second.example")], nextCursor: nil)
     }
 
     func fetchConnectionStatus() async throws -> ConnectionStatus {
         connectionRequests += 1
         return ConnectionStatus(status: "ok", protocolName: "DOH", profileID: "home")
+    }
+
+    private static func log(domain: String) -> LogEntry {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try! decoder.decode(LogEntry.self, from: Data(#"{"timestamp":"2026-07-12T01:02:03Z","domain":"\#(domain)","status":"default","reasons":[]}"#.utf8))
     }
 }
 

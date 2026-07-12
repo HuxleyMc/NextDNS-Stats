@@ -64,6 +64,16 @@ public struct LogEntry: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+public struct LogPage: Equatable, Sendable {
+    public let entries: [LogEntry]
+    public let nextCursor: String?
+
+    public init(entries: [LogEntry], nextCursor: String?) {
+        self.entries = entries
+        self.nextCursor = nextCursor
+    }
+}
+
 public struct DashboardSnapshot: Equatable, Sendable {
     public let totalRequests: Int
     public let blockedRequests: Int
@@ -72,9 +82,10 @@ public struct DashboardSnapshot: Equatable, Sendable {
     public let protocols: [LabeledMetric]
     public let devices: [LabeledMetric]
     public let logs: [LogEntry]
+    public let nextLogCursor: String?
     public let fetchedAt: Date
 
-    public init(totalRequests: Int, blockedRequests: Int, allowedRequests: Int, blockedDomains: [DomainMetric], protocols: [LabeledMetric], devices: [LabeledMetric], logs: [LogEntry], fetchedAt: Date = Date()) {
+    public init(totalRequests: Int, blockedRequests: Int, allowedRequests: Int, blockedDomains: [DomainMetric], protocols: [LabeledMetric], devices: [LabeledMetric], logs: [LogEntry], nextLogCursor: String? = nil, fetchedAt: Date = Date()) {
         self.totalRequests = totalRequests
         self.blockedRequests = blockedRequests
         self.allowedRequests = allowedRequests
@@ -82,7 +93,24 @@ public struct DashboardSnapshot: Equatable, Sendable {
         self.protocols = protocols
         self.devices = devices
         self.logs = logs
+        self.nextLogCursor = nextLogCursor
         self.fetchedAt = fetchedAt
+    }
+
+    public func appending(logPage: LogPage) -> DashboardSnapshot {
+        let existingIDs = Set(logs.map(\.id))
+        let newEntries = logPage.entries.filter { !existingIDs.contains($0.id) }
+        return DashboardSnapshot(
+            totalRequests: totalRequests,
+            blockedRequests: blockedRequests,
+            allowedRequests: allowedRequests,
+            blockedDomains: blockedDomains,
+            protocols: protocols,
+            devices: devices,
+            logs: logs + newEntries,
+            nextLogCursor: logPage.nextCursor,
+            fetchedAt: fetchedAt
+        )
     }
 
     public var blockRate: Double {

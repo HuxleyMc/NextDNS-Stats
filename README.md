@@ -8,7 +8,7 @@ A native, menu-bar-only macOS app for checking whether this Mac currently uses N
 - Multiple account profiles with instant switching
 - Total and blocked requests over the previous 24 hours
 - Block rate and the ten most-blocked domains
-- Recent DNS logs, including device and block reason
+- Recent DNS logs, including device and block reason, with cursor-based “Load more” pagination
 - Request breakdowns by protocol and device
 
 The app refreshes when its popover opens unless the current snapshot is less than 30 seconds old, then polls every 30 seconds while it remains open. Closing the popover stops polling, and manual refresh always fetches immediately.

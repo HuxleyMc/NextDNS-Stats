@@ -6,6 +6,7 @@ import FoundationNetworking
 public protocol NextDNSClientProtocol: Sendable {
     func fetchProfiles(apiKey: String) async throws -> [Profile]
     func fetchDashboard(profileID: String, apiKey: String, from: Date) async throws -> DashboardSnapshot
+    func fetchLogs(profileID: String, apiKey: String, from: Date, cursor: String?) async throws -> LogPage
     func fetchConnectionStatus() async throws -> ConnectionStatus
 }
 
@@ -40,7 +41,7 @@ public final class NextDNSClient: NextDNSClientProtocol, @unchecked Sendable {
         async let domains: [DomainMetric] = get(path: "\(prefix)/analytics/domains", apiKey: apiKey, query: [fromItem, URLQueryItem(name: "status", value: "blocked"), URLQueryItem(name: "limit", value: "10")])
         async let protocols: [ProtocolMetric] = get(path: "\(prefix)/analytics/protocols", apiKey: apiKey, query: [fromItem, URLQueryItem(name: "limit", value: "10")])
         async let devices: [DeviceMetric] = get(path: "\(prefix)/analytics/devices", apiKey: apiKey, query: [fromItem, URLQueryItem(name: "limit", value: "10")])
-        async let logs: [LogEntry] = get(path: "\(prefix)/logs", apiKey: apiKey, query: [fromItem, URLQueryItem(name: "limit", value: "50"), URLQueryItem(name: "sort", value: "desc")])
+        async let logs = fetchLogs(profileID: profileID, apiKey: apiKey, from: from, cursor: nil)
 
         let (statusValues, domainValues, protocolValues, deviceValues, logValues) = try await (statuses, domains, protocols, devices, logs)
         return DashboardSnapshot(
@@ -50,8 +51,26 @@ public final class NextDNSClient: NextDNSClientProtocol, @unchecked Sendable {
             blockedDomains: domainValues,
             protocols: protocolValues.map { LabeledMetric(label: $0.protocolName, queries: $0.queries) },
             devices: deviceValues.map { LabeledMetric(label: $0.name ?? "Unidentified", queries: $0.queries) },
-            logs: logValues
+            logs: logValues.entries,
+            nextLogCursor: logValues.nextCursor
         )
+    }
+
+    public func fetchLogs(profileID: String, apiKey: String, from: Date, cursor: String?) async throws -> LogPage {
+        let escapedID = profileID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? profileID
+        var query = [
+            URLQueryItem(name: "from", value: Self.iso8601.string(from: from)),
+            URLQueryItem(name: "limit", value: "50"),
+            URLQueryItem(name: "sort", value: "desc"),
+        ]
+        if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        let envelope: APIEnvelope<[LogEntry]> = try await getEnvelope(
+            path: "/profiles/\(escapedID)/logs",
+            apiKey: apiKey,
+            query: query
+        )
+        guard let entries = envelope.data else { throw NextDNSClientError.invalidResponse }
+        return LogPage(entries: entries, nextCursor: envelope.meta?.pagination?.cursor)
     }
 
     public func fetchConnectionStatus() async throws -> ConnectionStatus {
@@ -61,6 +80,12 @@ public final class NextDNSClient: NextDNSClientProtocol, @unchecked Sendable {
     }
 
     private func get<T: Decodable>(path: String, apiKey: String, query: [URLQueryItem]) async throws -> T {
+        let envelope: APIEnvelope<T> = try await getEnvelope(path: path, apiKey: apiKey, query: query)
+        guard let value = envelope.data else { throw NextDNSClientError.invalidResponse }
+        return value
+    }
+
+    private func getEnvelope<T: Decodable>(path: String, apiKey: String, query: [URLQueryItem]) async throws -> APIEnvelope<T> {
         var components = URLComponents(url: apiBaseURL.appendingPathComponent(String(path.dropFirst())), resolvingAgainstBaseURL: false)!
         if !query.isEmpty { components.queryItems = query }
         var request = URLRequest(url: components.url!)
@@ -71,8 +96,7 @@ public final class NextDNSClient: NextDNSClientProtocol, @unchecked Sendable {
         try validate(response)
         let envelope = try decoder.decode(APIEnvelope<T>.self, from: data)
         if let detail = envelope.errors?.first?.detail { throw NextDNSClientError.api(detail) }
-        guard let value = envelope.data else { throw NextDNSClientError.invalidResponse }
-        return value
+        return envelope
     }
 
     private func validate(_ response: URLResponse) throws {
@@ -90,6 +114,15 @@ public final class NextDNSClient: NextDNSClientProtocol, @unchecked Sendable {
 private struct APIEnvelope<Value: Decodable>: Decodable {
     let data: Value?
     let errors: [APIError]?
+    let meta: APIMeta?
+}
+
+private struct APIMeta: Decodable {
+    let pagination: Pagination?
+}
+
+private struct Pagination: Decodable {
+    let cursor: String?
 }
 
 private struct APIError: Decodable {

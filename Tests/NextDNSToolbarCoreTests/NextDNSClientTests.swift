@@ -39,7 +39,7 @@ final class NextDNSClientTests: XCTestCase {
                 return Self.response(for: request, json: #"{"data":[{"id":"mac","name":"MacBook","queries":60},{"id":"phone","name":"iPhone","queries":40}]}"#)
             case "/profiles/abc123/logs":
                 XCTAssertTrue(query.contains("limit=50"))
-                return Self.response(for: request, json: #"{"data":[{"timestamp":"2026-07-12T01:02:03.338Z","domain":"ads.example","status":"blocked","protocol":"DNS-over-HTTPS","device":{"id":"mac","name":"MacBook"},"reasons":[{"id":"blocklist:test","name":"Test List"}]}]}"#)
+                return Self.response(for: request, json: #"{"data":[{"timestamp":"2026-07-12T01:02:03.338Z","domain":"ads.example","status":"blocked","protocol":"DNS-over-HTTPS","device":{"id":"mac","name":"MacBook"},"reasons":[{"id":"blocklist:test","name":"Test List"}]}],"meta":{"pagination":{"cursor":"next-page"}}}"#)
             default:
                 XCTFail("Unexpected path \(path)")
                 return Self.response(for: request, json: #"{"data":[]}"#, status: 404)
@@ -56,6 +56,27 @@ final class NextDNSClientTests: XCTestCase {
         XCTAssertEqual(dashboard.devices.first?.label, "MacBook")
         XCTAssertEqual(dashboard.logs.first?.domain, "ads.example")
         XCTAssertEqual(dashboard.logs.first?.reason, "Test List")
+        XCTAssertEqual(dashboard.nextLogCursor, "next-page")
+    }
+
+    func testFetchLogsSendsCursorAndDecodesNextPage() async throws {
+        URLProtocolStub.handler = { request in
+            let query = request.url?.query ?? ""
+            XCTAssertEqual(request.url?.path, "/profiles/abc123/logs")
+            XCTAssertTrue(query.contains("cursor=current-page"))
+            XCTAssertTrue(query.contains("limit=50"))
+            return Self.response(for: request, json: #"{"data":[{"timestamp":"2026-07-12T01:02:03Z","domain":"github.com","status":"default","reasons":[]}],"meta":{"pagination":{"cursor":"final-page"}}}"#)
+        }
+
+        let page = try await makeClient().fetchLogs(
+            profileID: "abc123",
+            apiKey: "secret",
+            from: Date(timeIntervalSince1970: 1_700_000_000),
+            cursor: "current-page"
+        )
+
+        XCTAssertEqual(page.entries.map(\.domain), ["github.com"])
+        XCTAssertEqual(page.nextCursor, "final-page")
     }
 
     func testConnectionStatusTreatsOkAsConnected() async throws {

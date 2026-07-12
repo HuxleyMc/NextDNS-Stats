@@ -162,6 +162,22 @@ struct DashboardView: View {
                     EmptyState(text: "No recent logs")
                 } else {
                     compactLogs(limit: nil)
+                    if store.snapshot?.nextLogCursor != nil {
+                        Button {
+                            Task { await store.loadMoreLogs() }
+                        } label: {
+                            HStack(spacing: 7) {
+                                if store.isLoadingMoreLogs {
+                                    ProgressView().controlSize(.small)
+                                }
+                                Text(store.isLoadingMoreLogs ? "Loading…" : "Load more")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(store.isLoadingMoreLogs)
+                        .padding(.top, 12)
+                    }
                 }
             }
             .padding(.horizontal, 10)

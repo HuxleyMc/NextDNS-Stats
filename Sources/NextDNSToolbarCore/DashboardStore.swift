@@ -9,6 +9,7 @@ public final class DashboardStore: ObservableObject {
     @Published public private(set) var connection = ConnectionStatus(status: "unknown")
     @Published public private(set) var isAuthenticated = false
     @Published public private(set) var isLoading = false
+    @Published public private(set) var isLoadingMoreLogs = false
     @Published public private(set) var errorMessage: String?
 
     private let client: any NextDNSClientProtocol
@@ -18,6 +19,7 @@ public final class DashboardStore: ObservableObject {
     private var apiKey: String?
     private var refreshTask: Task<Void, Never>?
     private var lastRefreshAttempt: ContinuousClock.Instant?
+    private var dashboardFrom: Date?
 
     public init(
         client: any NextDNSClientProtocol = NextDNSClient(),
@@ -92,6 +94,7 @@ public final class DashboardStore: ObservableObject {
             }
             let from = Calendar.current.date(byAdding: .hour, value: -24, to: Date()) ?? Date().addingTimeInterval(-86_400)
             snapshot = try await client.fetchDashboard(profileID: selectedProfileID, apiKey: apiKey, from: from)
+            dashboardFrom = from
             isAuthenticated = true
         } catch {
             if profiles.isEmpty { isAuthenticated = false }
@@ -108,6 +111,7 @@ public final class DashboardStore: ObservableObject {
                 profiles = []
                 selectedProfileID = nil
                 snapshot = nil
+                dashboardFrom = nil
                 isAuthenticated = false
             } else {
                 try credentials.saveAPIKey(trimmed)
@@ -125,5 +129,31 @@ public final class DashboardStore: ObservableObject {
         guard profiles.contains(where: { $0.id == id }) else { return }
         selectedProfileID = id
         await refresh()
+    }
+
+    public func loadMoreLogs() async {
+        guard !isLoadingMoreLogs,
+              !isLoading,
+              let apiKey,
+              let selectedProfileID,
+              let dashboardFrom,
+              let snapshot,
+              let cursor = snapshot.nextLogCursor
+        else { return }
+
+        isLoadingMoreLogs = true
+        errorMessage = nil
+        defer { isLoadingMoreLogs = false }
+        do {
+            let page = try await client.fetchLogs(
+                profileID: selectedProfileID,
+                apiKey: apiKey,
+                from: dashboardFrom,
+                cursor: cursor
+            )
+            self.snapshot = snapshot.appending(logPage: page)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
