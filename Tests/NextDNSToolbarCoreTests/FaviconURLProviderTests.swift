@@ -22,6 +22,17 @@ final class FaviconURLProviderTests: XCTestCase {
         XCTAssertNil(FaviconURLProvider.url(for: "not a domain"))
     }
 
+    func testCandidateDomainsFallBackFromHostnameToRoot() {
+        XCTAssertEqual(
+            FaviconURLProvider.candidateDomains(for: "collector.github.com"),
+            ["collector.github.com", "github.com"]
+        )
+        XCTAssertEqual(
+            FaviconURLProvider.candidateDomains(for: "github.com"),
+            ["github.com"]
+        )
+    }
+
     func testModelsPreferRootDomainForIcons() throws {
         let metric = try JSONDecoder().decode(DomainMetric.self, from: Data(#"{"domain":"ads.example.com","root":"example.com","queries":3}"#.utf8))
         XCTAssertEqual(metric.iconDomain, "example.com")

@@ -25,23 +25,30 @@ private final class FaviconStore {
     func image(for domain: String) async -> NSImage? {
         let key = domain.lowercased() as NSString
         if let image = images.object(forKey: key) { return image }
-        guard !unavailable.contains(domain), let url = FaviconURLProvider.url(for: domain) else { return nil }
+        guard !unavailable.contains(domain) else { return nil }
 
-        do {
-            let (data, response) = try await session.data(from: url)
-            guard let http = response as? HTTPURLResponse,
-                  (200..<300).contains(http.statusCode),
-                  let image = NSImage(data: data)
-            else {
-                unavailable.insert(domain)
-                return nil
+        for candidate in FaviconURLProvider.candidateDomains(for: domain) {
+            let candidateKey = candidate as NSString
+            if let image = images.object(forKey: candidateKey) {
+                images.setObject(image, forKey: key)
+                return image
             }
-            images.setObject(image, forKey: key)
-            return image
-        } catch {
-            unavailable.insert(domain)
-            return nil
+            guard let url = FaviconURLProvider.url(for: candidate) else { continue }
+            do {
+                let (data, response) = try await session.data(from: url)
+                guard let http = response as? HTTPURLResponse,
+                      (200..<300).contains(http.statusCode),
+                      let image = NSImage(data: data)
+                else { continue }
+                images.setObject(image, forKey: candidateKey)
+                images.setObject(image, forKey: key)
+                return image
+            } catch {
+                continue
+            }
         }
+        unavailable.insert(domain)
+        return nil
     }
 }
 
