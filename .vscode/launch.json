@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:NextDNS Toolbar}",
+            "name": "Debug NextDNSStats",
+            "target": "NextDNSStats",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug NextDNSStats"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:NextDNS Toolbar}",
+            "name": "Release NextDNSStats",
+            "target": "NextDNSStats",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release NextDNSStats"
+        }
+    ]
+}
