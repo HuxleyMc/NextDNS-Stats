@@ -22,6 +22,14 @@ Requires macOS 14 or newer and Xcode 16 or newer.
 open "build/NextDNS Stats.app"
 ```
 
+To rebuild, replace the copy in Applications, preserve its stable Keychain identity, and relaunch it:
+
+```sh
+./scripts/install-app.sh
+```
+
+The first build using the stable signing requirement may ask for Keychain access once. Choose **Always Allow**; later rebuilds use the same designated requirement and should not prompt again.
+
 The shield icon appears in the macOS menu bar. Open Settings from the popover, then paste the API key shown at the bottom of the [NextDNS account page](https://my.nextdns.io/account).
 
 ## Privacy and credentials
