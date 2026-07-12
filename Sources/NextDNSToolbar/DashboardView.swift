@@ -29,6 +29,7 @@ struct DashboardView: View {
                     Picker("Section", selection: $section) {
                         ForEach(Section.allCases) { Text($0.rawValue).tag($0) }
                     }
+                    .labelsHidden()
                     .pickerStyle(.segmented)
                     .padding(5)
                     .glassPanel(cornerRadius: 12)
